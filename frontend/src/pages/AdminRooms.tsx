@@ -25,6 +25,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Building, Edit2, Trash2, Plus, MapPin, Users } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { UUID } from 'crypto';
 
 export const AdminRooms: React.FC = () => {
   const [rooms, setRooms] = useState<Room[]>([]);
@@ -136,7 +137,7 @@ export const AdminRooms: React.FC = () => {
 
   const handleDelete = async (roomId: string) => {
     if (!confirm('Are you sure you want to delete this room?')) return;
-    
+    console.log('Attempting to delete room:', roomId);
     try {
       await api.deleteRoom(roomId);
       setRooms(prev => prev.filter(r => r.id !== roomId));
@@ -330,8 +331,8 @@ export const AdminRooms: React.FC = () => {
                     </TableCell>
                     <TableCell>
   <div className="flex flex-wrap gap-1">
-    {(room.equipment?.slice(0, 2) || []).map((item, idx) => (
-      <Badge key={idx} variant="secondary" className="text-xs">
+    {(room.equipment?.slice(0, 2) || []).map((item) => (
+      <Badge key={item} variant="secondary" className="text-xs">
         {item}
       </Badge>
     ))}

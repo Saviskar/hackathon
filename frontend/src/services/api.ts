@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabaseClient';
 import { Room, Booking, BookingRequest, RoomSearchFilters, User } from '@/types';
+import { UUID } from 'crypto';
 
 // Mock data
 const mockRooms: Room[] = [
@@ -102,10 +103,12 @@ export const api = {
     }
     
     const { data, error } = await query.order('name', { ascending: true });
+    console.log(data[0]);
 
     if (error) throw new Error(error.message);
 
     const transformedData = data.map(room => ({
+      id: room.room_id,
       ...room,
       equipment: [
       room.has_projector ? 'Projector' : null,
@@ -119,13 +122,14 @@ export const api = {
     const has_projector = room.equipment?.includes('Projector') ?? false;
   const has_av = room.equipment?.includes('AV Equipment') ?? false;
 
+  const { equipment, ...roomWithoutEquipment } = room;
+    
     const { data, error } = await supabase
       .from('room')
       .insert([{
-      ...room,
-      has_projector,
-      has_av,
-      equipment: undefined, // Don't insert `equipment` directly into Supabase
+        ...roomWithoutEquipment,
+    has_projector,
+    has_av,
     }])
     .select()
     .single();
@@ -155,7 +159,7 @@ export const api = {
   const { data, error } = await supabase
     .from('room')
     .update(updatePayload)
-    .eq('id', id)
+    .eq('room_id', id)
     .select()
     .single();
 
@@ -172,15 +176,22 @@ export const api = {
 
 
   async deleteRoom(id: string): Promise<void> {
-  const { error } = await supabase.from('room').delete().eq('id', id);
-  if (error) throw new Error(error.message);
+    console.log('Deleting room with id:', id);
+  const { error } = 
+  await supabase.from('room_availability').delete().eq('room_id', id);
+  await supabase.from('room').delete().eq('room_id', id);
+  if (error) {
+    console.error('Delete error:', error);
+    throw new Error(error.message);
+  }
 },
 
   // Booking APIs
   async getBookings(userId?: string, date?: string): Promise<Booking[]> {
     let query = supabase
     .from('booking')
-    .select('*, room(*)');
+    .select(`*, room(*), user_profiles(*)`)
+    .order('start_time', { ascending: true });
 
     if (userId) {
     query = query.eq('userId', userId);
