@@ -58,8 +58,8 @@ Administrators can manage rooms and bookings, while Lecturers can search, view, 
 
 1. **Clone the repository**
    ```sh
-   git clone https://github.com/stefanshabbir/MiniHackathon.git
-   cd MiniHackathon
+   git clone https://github.com/Saviskar/hackathon.git
+   cd hackathon
    ```
 2. **Install dependencies**
     ```sh
@@ -70,5 +70,5 @@ Administrators can manage rooms and bookings, while Lecturers can search, view, 
     npm run dev
     ```
 4. **Login with demo credentials**
-    - Admin: ...@... | password123
-    - Lecturer: ...@... | password123
+    - Admin: admin@university.edu | password123
+    - Lecturer: ishara.silva@example.com | password123
