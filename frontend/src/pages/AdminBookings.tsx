@@ -29,7 +29,7 @@ export const AdminBookings: React.FC = () => {
     setLoading(true);
     try {
       const data = await api.getBookings();
-      setBookings(data.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+      setBookings(data.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
     } catch (error) {
       toast({
         title: "Error",
@@ -46,7 +46,7 @@ export const AdminBookings: React.FC = () => {
     
     try {
       await api.deleteBooking(bookingId);
-      setBookings(prev => prev.filter(b => b.id !== bookingId));
+      setBookings(prev => prev.filter(b => b.booking_id !== bookingId));
       toast({
         title: "Booking deleted",
         description: "Booking has been successfully deleted",
@@ -100,75 +100,60 @@ export const AdminBookings: React.FC = () => {
               </TableHeader>
               <TableBody>
                 {bookings.map((booking) => (
-                  <TableRow key={booking.id}>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{booking.title}</div>
-                        {booking.description && (
-                          <div className="text-sm text-muted-foreground">{booking.description}</div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-  <div className="flex items-start gap-2 flex-col">
-    <div className="flex items-center gap-1">
-      <MapPin className="h-3 w-3" />
-      <span className="text-sm font-medium">{booking.room?.name || 'Unknown Room'}</span>
+                  <TableRow key={booking.booking_id}>
+  <TableCell>
+    <div>
+      <div className="font-medium">{booking.reason}</div>
+      {/* You don't have description in your API, remove or add if needed */}
     </div>
-    {booking.room && (
-      <>
-        <div className="text-xs text-muted-foreground">
-          {booking.room.building}
+  </TableCell>
+  <TableCell>
+    <div className="flex items-start gap-2 flex-col">
+      <div className="flex items-center gap-1">
+        <MapPin className="h-3 w-3" />
+        <span className="text-sm font-medium">{booking.room?.name || 'Unknown Room'}</span>
+      </div>
+      {/* You might not have building or equipment info unless you expand the query */}
+    </div>
+  </TableCell>
+  <TableCell>
+    <div className="flex items-center gap-1">
+      <Calendar className="h-3 w-3" />
+      <div className="text-sm">
+        <div>{format(parseISO(booking.start_time), 'MMM d, yyyy')}</div>
+        <div className="text-muted-foreground">
+          {format(parseISO(booking.start_time), 'HH:mm')} - {format(parseISO(booking.end_time), 'HH:mm')}
         </div>
-        {booking.room.equipment && booking.room.equipment.length > 0 && (
-          <ul className="text-xs list-disc list-inside space-y-0.5 mt-1 text-muted-foreground">
-            {booking.room.equipment.map((item: string, idx: number) => (
-              <li key={idx}>{item}</li>
-            ))}
-          </ul>
-        )}
-      </>
-    )}
-  </div>
-</TableCell>
+      </div>
+    </div>
+  </TableCell>
+  <TableCell>
+    <div className="flex items-center gap-1">
+      <User className="h-3 w-3" />
+      <span className="text-sm">{booking.user?.full_name || 'Unknown User'}</span>
+    </div>
+  </TableCell>
+  <TableCell>
+    <Badge className={getStatusColor(booking.status)}>
+      {booking.status}
+    </Badge>
+  </TableCell>
+  <TableCell>
+    <div className="text-sm text-muted-foreground">
+      {format(parseISO(booking.created_at), 'MMM d, yyyy')}
+    </div>
+  </TableCell>
+  <TableCell>
+    <Button
+      variant="destructive"
+      size="sm"
+      onClick={() => handleDeleteBooking(booking.booking_id)}
+    >
+      <Trash2 className="h-3 w-3" />
+    </Button>
+  </TableCell>
+</TableRow>
 
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        <div className="text-sm">
-                          <div>{format(parseISO(booking.date), 'MMM d, yyyy')}</div>
-                          <div className="text-muted-foreground">
-                            {booking.startTime} - {booking.endTime}
-                          </div>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <User className="h-3 w-3" />
-                        <span className="text-sm">{booking.user?.name || booking.userId}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={getStatusColor(booking.status)}>
-                        {booking.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm text-muted-foreground">
-                        {format(parseISO(booking.createdAt), 'MMM d, yyyy')}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleDeleteBooking(booking.id)}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
                 ))}
               </TableBody>
             </Table>

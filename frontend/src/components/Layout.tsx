@@ -87,7 +87,7 @@ export const Layout: React.FC = () => {
                 <DropdownMenuContent className="w-56" align="end" forceMount>
                   <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium">{user?.name}</p>
+                      <p className="text-sm font-medium">{user?.full_name}</p>
                       <p className="text-xs text-muted-foreground">{user?.email}</p>
                       <p className="text-xs text-muted-foreground capitalize">{user?.role}</p>
                     </div>

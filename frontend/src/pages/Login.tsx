@@ -96,8 +96,6 @@ export const Login: React.FC = () => {
               Demo Credentials:
             </div>
             <div className="text-xs mt-2 space-y-1">
-              <div><strong>Admin:</strong> admin@university.edu / password123</div>
-              <div><strong>Lecturer:</strong> lecturer@university.edu / password123</div>
             </div>
           </div>
         </CardContent>

@@ -1,7 +1,7 @@
 export interface User {
   id: string;
   email: string;
-  name: string;
+  full_name: string;
   role: 'admin' | 'lecturer';
   department?: string;
 }
@@ -19,28 +19,28 @@ export interface Room {
 }
 
 export interface Booking {
-  id: string;
-  roomId: string;
+  booking_id: string;
+  room_id: string;
   room?: Room;
-  userId: string;
+  user_id: string;
   user?: User;
-  title: string;
+  reason: string;
   description?: string;
   date: string;
-  startTime: string;
-  endTime: string;
+  start_time: string;
+  end_time: string;
   status: 'confirmed' | 'pending' | 'cancelled';
-  createdAt: string;
-  updatedAt: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface BookingRequest {
-  roomId: string;
+  room_id: string;
   title: string;
   description?: string;
   date: string;
-  startTime: string;
-  endTime: string;
+  start_time: string,  // send combined ISO strings
+  end_time: string
 }
 
 export interface RoomSearchFilters {

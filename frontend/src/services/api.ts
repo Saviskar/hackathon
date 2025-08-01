@@ -50,34 +50,6 @@ const mockRooms: Room[] = [
   }
 ];
 
-const mockBookings: Booking[] = [
-  {
-    id: 'booking-1',
-    roomId: 'room-1',
-    userId: 'lecturer-1',
-    title: 'Advanced Algorithms',
-    description: 'CS401 - Weekly lecture',
-    date: '2024-08-05',
-    startTime: '09:00',
-    endTime: '10:30',
-    status: 'confirmed',
-    createdAt: '2024-08-01T10:00:00Z',
-    updatedAt: '2024-08-01T10:00:00Z'
-  },
-  {
-    id: 'booking-2',
-    roomId: 'room-2',
-    userId: 'lecturer-1',
-    title: 'Research Seminar',
-    description: 'Weekly research discussion',
-    date: '2024-08-06',
-    startTime: '14:00',
-    endTime: '15:30',
-    status: 'confirmed',
-    createdAt: '2024-08-01T11:00:00Z',
-    updatedAt: '2024-08-01T11:00:00Z'
-  }
-];
 
 export const api = {
   // Room APIs
@@ -188,84 +160,173 @@ export const api = {
 
   // Booking APIs
   async getBookings(userId?: string, date?: string): Promise<Booking[]> {
-    let query = supabase
-    .from('booking')
-    .select(`*, room(*), user_profiles(*)`)
-    .order('start_time', { ascending: true });
+  //   const query  = await supabase
+  //   .from('booking')
+  //   .select(`*, room(*), Users(*)`)
+  //   .order('start_time', { ascending: true });
+    
+  //   const { data, error } = await query;
+  //   console.log('Raw bookings:', data);
+  
+  //     console.log('Bookings data:', data);
+  // if (error) throw new Error(error.message);
+  // return data as Booking[];
+
+  let query = supabase
+    .from("booking")
+    .select(`
+      booking_id,
+      reason,
+      date,
+      start_time,
+      end_time,
+      status,
+      created_at,
+      room:room_id (
+        name
+      ),
+      user:user_id (
+        full_name,
+        role,
+        phone
+      )
+    `)
+    .order("created_at", { ascending: false });
 
     if (userId) {
-    query = query.eq('userId', userId);
+    query = query.eq("user_id", userId);
   }
 
   if (date) {
-    query = query.eq('date', date);
+    // Match records whose start_time is on the same date
+    const start = new Date(date);
+    const end = new Date(date);
+    end.setDate(end.getDate() + 1);
+
+    query = query
+      .gte("start_time", start.toISOString())
+      .lt("start_time", end.toISOString());
   }
 
   const { data, error } = await query;
 
-  if (error) throw new Error(error.message);
-  return data as Booking[];
+  if (error) throw error;
+
+  console.log(data);
+  return data;
+
   },
 
   async createBooking(bookingData: BookingRequest): Promise<Booking> {
-    
-    // Check for conflicts
-    const conflicts = mockBookings.filter(b => 
-      b.roomId === bookingData.roomId &&
-      b.date === bookingData.date &&
-      b.status !== 'cancelled' &&
-      (
-        (bookingData.startTime >= b.startTime && bookingData.startTime < b.endTime) ||
-        (bookingData.endTime > b.startTime && bookingData.endTime <= b.endTime) ||
-        (bookingData.startTime <= b.startTime && bookingData.endTime >= b.endTime)
-      )
-    );
-    
-    if (conflicts.length > 0) {
-      throw new Error('Time slot is already booked');
-    }
-    
-    const newBooking: Booking = {
-      id: `booking-${Date.now()}`,
-      ...bookingData,
-      userId: 'lecturer-1', // In real app, get from auth context
-      status: 'confirmed',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    
-    mockBookings.push(newBooking);
-    return newBooking;
-  },
+  // 1. Check for conflicts by querying bookings on the same room and date/time range
+  const { data: conflicts, error: conflictError } = await supabase
+    .from('booking')
+    .select('*')
+    .eq('room_id', bookingData.room_id)
+    .eq('date', bookingData.date)
+    .neq('status', 'cancelled')
+    .or(`
+      and(start_time.gte.${bookingData.start_time},start_time.lt.${bookingData.end_time}),
+      and(end_time.gt.${bookingData.start_time},end_time.lte.${bookingData.end_time}),
+      and(start_time.lte.${bookingData.start_time},end_time.gte.${bookingData.end_time})
+    `);
+
+  if (conflictError) {
+    throw new Error(conflictError.message);
+  }
+  if (conflicts && conflicts.length > 0) {
+    throw new Error('Time slot is already booked');
+  }
+
+  // 2. Insert the new booking
+  const newBookingData = {
+    ...bookingData,
+    user_id: name, // Replace with actual user from auth context
+    status: 'confirmed',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+
+  const { data, error } = await supabase
+    .from('booking')
+    .insert(newBookingData)
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data as Booking;
+},
+
 
   async updateBooking(id: string, updates: Partial<Booking>): Promise<Booking> {
-    const index = mockBookings.findIndex(b => b.id === id);
-    if (index === -1) throw new Error('Booking not found');
-    
-    mockBookings[index] = { ...mockBookings[index], ...updates, updatedAt: new Date().toISOString() };
-    return mockBookings[index];
-  },
+  const updatesWithTimestamp = {
+    ...updates,
+    updated_at: new Date().toISOString(),
+  };
+
+  const { data, error } = await supabase
+    .from('booking')
+    .update(updatesWithTimestamp)
+    .eq('booking_id', id)
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data as Booking;
+},
+
 
   async deleteBooking(id: string): Promise<void> {
-    const index = mockBookings.findIndex(b => b.id === id);
-    if (index === -1) throw new Error('Booking not found');
-    mockBookings.splice(index, 1);
-  },
+  const { error } = await supabase
+    .from('booking')
+    .delete()
+    .eq('booking_id', id);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+},
+
 
   // Check room availability for a specific date and time range
-  async checkAvailability(roomId: string, date: string, startTime: string, endTime: string): Promise<boolean> {
-    
-    const conflicts = mockBookings.filter(b => 
-      b.roomId === roomId &&
-      b.date === date &&
-      b.status !== 'cancelled' &&
-      (
-        (startTime >= b.startTime && startTime < b.endTime) ||
-        (endTime > b.startTime && endTime <= b.endTime) ||
-        (startTime <= b.startTime && endTime >= b.endTime)
-      )
-    );
-    
-    return conflicts.length === 0;
+  async checkAvailability(
+  roomId: string,
+  date: string,          // format: "YYYY-MM-DD"
+  start_time: string,    // format: "HH:mm"
+  end_time: string       // format: "HH:mm"
+): Promise<boolean> {
+  // Combine date + time to ISO 8601 strings
+  const startDateTime = new Date(`${date}T${start_time}:00Z`).toISOString();
+  const endDateTime = new Date(`${date}T${end_time}:00Z`).toISOString();
+
+  // Build filter string with quoted timestamps
+  const filterString = `
+    and(start_time.gte.'${startDateTime}',start_time.lt.'${endDateTime}'),
+    and(end_time.gt.'${startDateTime}',end_time.lte.'${endDateTime}'),
+    and(start_time.lte.'${startDateTime}',end_time.gte.'${endDateTime}')
+  `;
+
+  const { data: conflicts, error } = await supabase
+    .from('booking')
+    .select('start_time, end_time')
+    .eq('room_id', roomId)
+    .eq('date', date)
+    .neq('status', 'cancelled')
+    .or(filterString);
+
+  if (error) {
+    throw new Error(`Availability check failed: ${error.message}`);
   }
+
+  return (conflicts?.length ?? 0) === 0;
+}
+
+
+
 };

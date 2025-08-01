@@ -66,11 +66,14 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
     setCheckingAvailability(true);
     try {
+      const startDateTimeISO = new Date(`${formData.date}T${formData.startTime}:00Z`).toISOString();
+const endDateTimeISO = new Date(`${formData.date}T${formData.endTime}:00Z`).toISOString();
+
       const available = await api.checkAvailability(
         room.id,
         formData.date,
-        formData.startTime,
-        formData.endTime
+        startDateTimeISO,
+        endDateTimeISO
       );
       setIsAvailable(available);
       if (!available) {
@@ -80,6 +83,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
       }
     } catch (err) {
       setError('Failed to check availability');
+      console.error(err);
     } finally {
       setCheckingAvailability(false);
     }
@@ -106,12 +110,12 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     setLoading(true);
     try {
       const bookingData: BookingRequest = {
-        roomId: room.id,
+        room_id: room.id,
         title: formData.title,
         description: formData.description,
         date: formData.date,
-        startTime: formData.startTime,
-        endTime: formData.endTime
+        start_time: formData.startTime,
+        end_time: formData.endTime
       };
 
       await api.createBooking(bookingData);

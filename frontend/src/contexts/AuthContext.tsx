@@ -60,7 +60,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const user: User = {
       id: authData.user.id,
       email: authData.user.email ?? '',
-      name: profile.name,
+      full_name: profile.name,
       role: profile.role, // e.g., 'admin' or 'lecturer'
       department: profile.department,
     };
