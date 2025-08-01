@@ -1,3 +1,4 @@
+import { supabase } from '@/lib/supabaseClient';
 import { Room, Booking, BookingRequest, RoomSearchFilters, User } from '@/types';
 
 // Mock data
@@ -77,82 +78,125 @@ const mockBookings: Booking[] = [
   }
 ];
 
-// API simulation with delays
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
 export const api = {
   // Room APIs
   async getRooms(filters?: RoomSearchFilters): Promise<Room[]> {
-    await delay(500);
     
-    let filteredRooms = [...mockRooms];
-    
+    let query = supabase.from('room').select('*');
+
     if (filters) {
       if (filters.capacity) {
-        filteredRooms = filteredRooms.filter(room => room.capacity >= filters.capacity!);
+        query = query.gte('capacity', filters.capacity);
       }
       if (filters.type) {
-        filteredRooms = filteredRooms.filter(room => room.type === filters.type);
+        query = query.eq('type', filters.type);
       }
       if (filters.building) {
-        filteredRooms = filteredRooms.filter(room => room.building === filters.building);
+        query = query.eq('building', filters.building);
       }
       if (filters.location) {
-        filteredRooms = filteredRooms.filter(room => 
-          room.location.toLowerCase().includes(filters.location!.toLowerCase()) ||
-          room.building.toLowerCase().includes(filters.location!.toLowerCase())
+        query = query.or(
+          `location.ilike.%${filters.location}%,building.ilike.%${filters.location}%`
         );
       }
     }
     
-    return filteredRooms;
+    const { data, error } = await query.order('name', { ascending: true });
+
+    if (error) throw new Error(error.message);
+
+    const transformedData = data.map(room => ({
+      ...room,
+      equipment: [
+      room.has_projector ? 'Projector' : null,
+        room.has_av ? 'AV Equipment' : null,
+      ].filter(Boolean), // removes nulls
+    }));
+    return transformedData as Room[];
   },
 
   async createRoom(room: Omit<Room, 'id'>): Promise<Room> {
-    await delay(800);
-    const newRoom = { ...room, id: `room-${Date.now()}` };
-    mockRooms.push(newRoom);
-    return newRoom;
+    const has_projector = room.equipment?.includes('Projector') ?? false;
+  const has_av = room.equipment?.includes('AV Equipment') ?? false;
+
+    const { data, error } = await supabase
+      .from('room')
+      .insert([{
+      ...room,
+      has_projector,
+      has_av,
+      equipment: undefined, // Don't insert `equipment` directly into Supabase
+    }])
+    .select()
+    .single();
+
+      if (error) throw new Error(error.message);
+    return {
+    ...data,
+    equipment: [
+      data.has_projector ? 'Projector' : null,
+      data.has_av ? 'AV Equipment' : null,
+    ].filter(Boolean),
+  } as Room;
   },
 
   async updateRoom(id: string, room: Partial<Room>): Promise<Room> {
-    await delay(600);
-    const index = mockRooms.findIndex(r => r.id === id);
-    if (index === -1) throw new Error('Room not found');
-    
-    mockRooms[index] = { ...mockRooms[index], ...room };
-    return mockRooms[index];
-  },
+  // Convert equipment array to booleans if present
+  const has_projector = room.equipment?.includes('Projector');
+  const has_av = room.equipment?.includes('AV Equipment');
+
+  const updatePayload: unknown = {
+    ...room,
+    ...(has_projector !== undefined && { has_projector }),
+    ...(has_av !== undefined && { has_av }),
+    equipment: undefined,
+  };
+
+  const { data, error } = await supabase
+    .from('room')
+    .update(updatePayload)
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+
+  return {
+    ...data,
+    equipment: [
+      data.has_projector ? 'Projector' : null,
+      data.has_av ? 'AV Equipment' : null,
+    ].filter(Boolean),
+  } as Room;
+},
+
 
   async deleteRoom(id: string): Promise<void> {
-    await delay(500);
-    const index = mockRooms.findIndex(r => r.id === id);
-    if (index === -1) throw new Error('Room not found');
-    mockRooms.splice(index, 1);
-  },
+  const { error } = await supabase.from('room').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+},
 
   // Booking APIs
   async getBookings(userId?: string, date?: string): Promise<Booking[]> {
-    await delay(400);
-    
-    let filteredBookings = mockBookings.map(booking => ({
-      ...booking,
-      room: mockRooms.find(r => r.id === booking.roomId),
-    }));
-    
+    let query = supabase
+    .from('booking')
+    .select('*, room(*)');
+
     if (userId) {
-      filteredBookings = filteredBookings.filter(b => b.userId === userId);
-    }
-    
-    if (date) {
-      filteredBookings = filteredBookings.filter(b => b.date === date);
-    }
-    
-    return filteredBookings;
+    query = query.eq('userId', userId);
+  }
+
+  if (date) {
+    query = query.eq('date', date);
+  }
+
+  const { data, error } = await query;
+
+  if (error) throw new Error(error.message);
+  return data as Booking[];
   },
 
   async createBooking(bookingData: BookingRequest): Promise<Booking> {
-    await delay(700);
     
     // Check for conflicts
     const conflicts = mockBookings.filter(b => 
@@ -184,7 +228,6 @@ export const api = {
   },
 
   async updateBooking(id: string, updates: Partial<Booking>): Promise<Booking> {
-    await delay(600);
     const index = mockBookings.findIndex(b => b.id === id);
     if (index === -1) throw new Error('Booking not found');
     
@@ -193,7 +236,6 @@ export const api = {
   },
 
   async deleteBooking(id: string): Promise<void> {
-    await delay(500);
     const index = mockBookings.findIndex(b => b.id === id);
     if (index === -1) throw new Error('Booking not found');
     mockBookings.splice(index, 1);
@@ -201,7 +243,6 @@ export const api = {
 
   // Check room availability for a specific date and time range
   async checkAvailability(roomId: string, date: string, startTime: string, endTime: string): Promise<boolean> {
-    await delay(300);
     
     const conflicts = mockBookings.filter(b => 
       b.roomId === roomId &&

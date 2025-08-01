@@ -226,8 +226,8 @@ export const AdminRooms: React.FC = () => {
                       <SelectValue placeholder="Select type" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="lecture">Lecture Hall</SelectItem>
-                      <SelectItem value="seminar">Seminar Room</SelectItem>
+                      <SelectItem value="lecture_hall">Lecture Hall</SelectItem>
+                      <SelectItem value="seminar_room">Seminar Room</SelectItem>
                       <SelectItem value="lab">Laboratory</SelectItem>
                       <SelectItem value="meeting">Meeting Room</SelectItem>
                     </SelectContent>
@@ -267,7 +267,7 @@ export const AdminRooms: React.FC = () => {
                 <div className="space-y-2">
                   <Label htmlFor="floor">Floor *</Label>
                   <Input
-                    id="floor"
+                    id="level"
                     type="number"
                     value={formData.floor}
                     onChange={(e) => setFormData(prev => ({ ...prev, floor: e.target.value }))}
@@ -329,19 +329,19 @@ export const AdminRooms: React.FC = () => {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {room.equipment.slice(0, 2).map((item, idx) => (
-                          <Badge key={idx} variant="secondary" className="text-xs">
-                            {item}
-                          </Badge>
-                        ))}
-                        {room.equipment.length > 2 && (
-                          <Badge variant="secondary" className="text-xs">
-                            +{room.equipment.length - 2}
-                          </Badge>
-                        )}
-                      </div>
-                    </TableCell>
+  <div className="flex flex-wrap gap-1">
+    {(room.equipment?.slice(0, 2) || []).map((item, idx) => (
+      <Badge key={idx} variant="secondary" className="text-xs">
+        {item}
+      </Badge>
+    ))}
+    {Array.isArray(room.equipment) && room.equipment.length > 2 && (
+      <Badge variant="secondary" className="text-xs">
+        +{room.equipment.length - 2}
+      </Badge>
+    )}
+  </div>
+</TableCell>
                     <TableCell>
                       <div className="flex gap-2">
                         <Button

@@ -110,16 +110,28 @@ export const AdminBookings: React.FC = () => {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-1">
-                        <MapPin className="h-3 w-3" />
-                        <span className="text-sm">{booking.room?.name || 'Unknown Room'}</span>
-                      </div>
-                      {booking.room && (
-                        <div className="text-xs text-muted-foreground">
-                          {booking.room.building}
-                        </div>
-                      )}
-                    </TableCell>
+  <div className="flex items-start gap-2 flex-col">
+    <div className="flex items-center gap-1">
+      <MapPin className="h-3 w-3" />
+      <span className="text-sm font-medium">{booking.room?.name || 'Unknown Room'}</span>
+    </div>
+    {booking.room && (
+      <>
+        <div className="text-xs text-muted-foreground">
+          {booking.room.building}
+        </div>
+        {booking.room.equipment && booking.room.equipment.length > 0 && (
+          <ul className="text-xs list-disc list-inside space-y-0.5 mt-1 text-muted-foreground">
+            {booking.room.equipment.map((item: string, idx: number) => (
+              <li key={idx}>{item}</li>
+            ))}
+          </ul>
+        )}
+      </>
+    )}
+  </div>
+</TableCell>
+
                     <TableCell>
                       <div className="flex items-center gap-1">
                         <Calendar className="h-3 w-3" />
